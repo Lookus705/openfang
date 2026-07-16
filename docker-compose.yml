@@ -6,7 +6,7 @@ version: "3.8"
 services:
   openfang:
     build: .
-    # image: ghcr.io/Lookus705/openfang:0.6.9
+    # image: ghcr.io/lookus705/openfang:0.6.9
     ports:
       - "4200:4200"
     volumes:
