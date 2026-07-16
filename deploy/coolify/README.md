@@ -8,7 +8,7 @@ Coolify only pulls and runs that pinned image.
 
 - OpenFang version: `0.6.9`
 - VPS architecture checked on `2026-07-16`: `linux/amd64`
-- Published image tag: `ghcr.io/Lookus705/openfang:0.6.9`
+- Published image tag: `ghcr.io/lookus705/openfang:0.6.9`
 - Persistent data path in the container: `/data`
 - Container port: `4200`
 - Health endpoint: `GET /api/health`
@@ -46,7 +46,7 @@ Create a new application in Coolify using a Docker image, not a Git repository.
 
 ### Image
 
-- Image: `ghcr.io/Lookus705/openfang:0.6.9`
+- Image: `ghcr.io/lookus705/openfang:0.6.9`
 - Registry: `ghcr.io`
 
 If the package is private, configure registry authentication with:
