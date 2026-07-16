@@ -25,10 +25,12 @@ jobs:
           source deploy/coolify/image.env
           set +a
           arch_suffix="${TARGET_PLATFORM#linux/}"
-          image_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${IMAGE_NAME}"
+          owner_lc="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          image_ref="ghcr.io/${owner_lc}/${IMAGE_NAME}"
           echo "openfang_version=${OPENFANG_VERSION}" >> "$GITHUB_OUTPUT"
           echo "target_platform=${TARGET_PLATFORM}" >> "$GITHUB_OUTPUT"
           echo "arch_suffix=${arch_suffix}" >> "$GITHUB_OUTPUT"
+          echo "owner_lc=${owner_lc}" >> "$GITHUB_OUTPUT"
           echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
