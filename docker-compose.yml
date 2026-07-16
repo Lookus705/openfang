@@ -1,12 +1,12 @@
-# NOTE: The GHCR image (ghcr.io/rightnow-ai/openfang) is not yet public.
-# For now, build from source using `docker compose up --build`.
-# See: https://github.com/RightNow-AI/openfang/issues/12
+# Local development keeps `build: .` enabled.
+# For production on Coolify, use the pinned GHCR image produced by
+# .github/workflows/build-coolify-ghcr.yml under your own GitHub namespace.
 
 version: "3.8"
 services:
   openfang:
     build: .
-    # image: ghcr.io/rightnow-ai/openfang:latest  # Uncomment when GHCR is public
+    # image: ghcr.io/Lookus705/openfang:0.6.9
     ports:
       - "4200:4200"
     volumes:
