@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, webcrypto } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,10 @@ const PORT = parseInt(process.env.WHATSAPP_GATEWAY_PORT || '3009', 10);
 const OPENFANG_URL = (process.env.OPENFANG_URL || 'http://127.0.0.1:4200').replace(/\/+$/, '');
 const DEFAULT_AGENT = process.env.OPENFANG_DEFAULT_AGENT || 'assistant';
 const OPENFANG_API_KEY = process.env.OPENFANG_API_KEY || '';
+
+// Node 18 exposes Web Crypto through node:crypto but not always on globalThis.
+// Baileys expects the browser-compatible global name during its handshake.
+if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
 // ---------------------------------------------------------------------------
 // State
