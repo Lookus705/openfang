@@ -155,17 +155,22 @@ pub async fn start_whatsapp_gateway(kernel: &Arc<super::kernel::OpenFangKernel>)
     let port = DEFAULT_GATEWAY_PORT;
     let api_listen = &kernel.config.api_listen;
     let openfang_url = format!("http://{api_listen}");
-    let configured_agent = wa_config
-        .default_agent
-        .as_deref()
-        .unwrap_or("assistant");
+    let configured_agent = wa_config.default_agent.as_deref().unwrap_or("assistant");
     let default_agent = configured_agent
         .parse::<openfang_types::agent::AgentId>()
         .ok()
-        .or_else(|| kernel.registry.find_by_name(configured_agent).map(|agent| agent.id))
+        .or_else(|| {
+            kernel
+                .registry
+                .find_by_name(configured_agent)
+                .map(|agent| agent.id)
+        })
         .map(|id| id.to_string())
         .unwrap_or_else(|| {
-            warn!(agent = configured_agent, "WhatsApp default agent was not found");
+            warn!(
+                agent = configured_agent,
+                "WhatsApp default agent was not found"
+            );
             configured_agent.to_string()
         });
 
