@@ -155,11 +155,19 @@ pub async fn start_whatsapp_gateway(kernel: &Arc<super::kernel::OpenFangKernel>)
     let port = DEFAULT_GATEWAY_PORT;
     let api_listen = &kernel.config.api_listen;
     let openfang_url = format!("http://{api_listen}");
-    let default_agent = wa_config
+    let configured_agent = wa_config
         .default_agent
         .as_deref()
-        .unwrap_or("assistant")
-        .to_string();
+        .unwrap_or("assistant");
+    let default_agent = configured_agent
+        .parse::<openfang_types::agent::AgentId>()
+        .ok()
+        .or_else(|| kernel.registry.find_by_name(configured_agent).map(|agent| agent.id))
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| {
+            warn!(agent = configured_agent, "WhatsApp default agent was not found");
+            configured_agent.to_string()
+        });
 
     // Auto-set the env var so the rest of the system finds the gateway
     std::env::set_var(
@@ -186,6 +194,10 @@ pub async fn start_whatsapp_gateway(kernel: &Arc<super::kernel::OpenFangKernel>)
                 .env("WHATSAPP_GATEWAY_PORT", port.to_string())
                 .env("OPENFANG_URL", &openfang_url)
                 .env("OPENFANG_DEFAULT_AGENT", &default_agent)
+                .env(
+                    "OPENFANG_API_KEY",
+                    std::env::var("OPENFANG_API_KEY").unwrap_or_default(),
+                )
                 .stdout(std::process::Stdio::inherit())
                 .stderr(std::process::Stdio::inherit())
                 .spawn();

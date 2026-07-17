@@ -18,6 +18,7 @@ const __dirname = path.dirname(__filename);
 const PORT = parseInt(process.env.WHATSAPP_GATEWAY_PORT || '3009', 10);
 const OPENFANG_URL = (process.env.OPENFANG_URL || 'http://127.0.0.1:4200').replace(/\/+$/, '');
 const DEFAULT_AGENT = process.env.OPENFANG_DEFAULT_AGENT || 'assistant';
+const OPENFANG_API_KEY = process.env.OPENFANG_API_KEY || '';
 
 // ---------------------------------------------------------------------------
 // State
@@ -184,6 +185,8 @@ function forwardToOpenFang(text, phone, pushName, metadata) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       message: text,
+      sender_id: phone,
+      sender_name: pushName,
       metadata: metadata || {
         channel: 'whatsapp',
         sender: phone,
@@ -202,6 +205,7 @@ function forwardToOpenFang(text, phone, pushName, metadata) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
+          ...(OPENFANG_API_KEY ? { Authorization: `Bearer ${OPENFANG_API_KEY}` } : {}),
         },
         timeout: 120_000, // LLM calls can be slow
       },
@@ -209,6 +213,10 @@ function forwardToOpenFang(text, phone, pushName, metadata) {
         let body = '';
         res.on('data', (chunk) => (body += chunk));
         res.on('end', () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(`OpenFang API returned ${res.statusCode}: ${body.slice(0, 500)}`));
+            return;
+          }
           try {
             const data = JSON.parse(body);
             // The /api/agents/{id}/message endpoint returns { response: "..." }
