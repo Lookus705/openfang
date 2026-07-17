@@ -311,7 +311,18 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      // Start a new connection (resets any existing)
+      // The dashboard may reopen or refresh while the user is scanning. Reuse
+      // the live QR instead of replacing its socket and invalidating the scan.
+      if (connStatus === 'qr_ready' && qrDataUrl) {
+        return jsonResponse(res, 200, {
+          qr_data_url: qrDataUrl,
+          session_id: sessionId,
+          message: statusMessage,
+          connected: false,
+        });
+      }
+
+      // No live QR exists, so begin a fresh WhatsApp Web connection.
       await startConnection();
 
       // Wait briefly for QR to generate (Baileys emits it quickly)
