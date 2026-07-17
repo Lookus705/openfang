@@ -182,4 +182,35 @@ server.registerTool("close_shift", {
   } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
 });
 
+server.registerTool("get_delivery_instructions", {
+  description: "Consulta el cliente fiscal, alias comercial, ubicaciones e instrucciones aprobadas para una factura o cliente.",
+  inputSchema: { user_id: driverId, invoice_number: z.string().min(1).optional(), client_id: z.string().uuid().optional() },
+}, async ({ user_id, invoice_number, client_id }) => {
+  await requireDriver(user_id);
+  if (!invoice_number && !client_id) throw new Error("Indica factura o cliente");
+  const client = client_id ? await pool.query("SELECT id, nombre, empresa FROM public.clientes WHERE id = $1", [client_id]) : await pool.query(
+    "SELECT c.id, c.nombre, c.empresa FROM public.facturas f JOIN public.clientes c ON c.id = f.cliente_id WHERE f.numero = $1 LIMIT 1", [invoice_number]);
+  if (!client.rowCount) throw new Error("No se encontro el cliente de la factura");
+  const id = client.rows[0].id;
+  const [aliases, locations, instructions] = await Promise.all([
+    pool.query("SELECT alias FROM public.cliente_aliases WHERE cliente_id = $1 ORDER BY alias", [id]),
+    pool.query("SELECT id, nombre, direccion, contacto FROM public.ubicaciones_entrega WHERE cliente_id = $1 AND activo ORDER BY nombre", [id]),
+    pool.query("SELECT tipo, contenido, prioridad, expira_at FROM public.instrucciones_entrega WHERE cliente_id = $1 AND estado = 'aprobada' AND (expira_at IS NULL OR expira_at > now()) ORDER BY prioridad DESC, created_at DESC", [id]),
+  ]);
+  return textResult({ client: client.rows[0], aliases: aliases.rows, locations: locations.rows, instructions: instructions.rows });
+});
+
+server.registerTool("propose_delivery_note", {
+  description: "Propone una nota operativa de cliente o ubicacion. Queda pendiente hasta aprobacion de un responsable.",
+  inputSchema: { user_id: driverId, shift_id: z.string().uuid(), client_id: z.string().uuid(), location_id: z.string().uuid().optional(), note_type: z.enum(["horario", "acceso", "recepcion", "temperatura", "general"]), content: z.string().min(5), priority: z.enum(["baja", "media", "alta"]).default("media") },
+}, async ({ user_id, shift_id, client_id, location_id, note_type, content, priority }) => {
+  await requireOpenShift(user_id, shift_id);
+  const location = location_id ? await pool.query("SELECT id FROM public.ubicaciones_entrega WHERE id = $1 AND cliente_id = $2 AND activo", [location_id, client_id]) : { rowCount: 1 };
+  if (!location.rowCount) throw new Error("La ubicacion no pertenece al cliente o no esta activa");
+  const result = await pool.query(
+    "INSERT INTO public.instrucciones_entrega (cliente_id, ubicacion_id, tipo, contenido, prioridad, creado_por_user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, estado, tipo, created_at",
+    [client_id, location_id ?? null, note_type, content, priority, user_id]);
+  return textResult({ note: result.rows[0], message: "Nota enviada para aprobacion" });
+});
+
 await server.connect(new StdioServerTransport());
