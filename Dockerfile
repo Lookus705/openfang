@@ -27,6 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /build/target/release/openfang /usr/local/bin/
 COPY --from=builder /build/agents /opt/openfang/agents
+COPY packages/supabase-mcp/package.json packages/supabase-mcp/package-lock.json /opt/openfang/supabase-mcp/
+RUN npm ci --omit=dev --prefix /opt/openfang/supabase-mcp
+COPY packages/supabase-mcp/index.mjs /opt/openfang/supabase-mcp/index.mjs
 EXPOSE 4200
 VOLUME /data
 ENV OPENFANG_HOME=/data
