@@ -34,6 +34,9 @@ COPY packages/supabase-mcp/index.mjs /opt/openfang/supabase-mcp/index.mjs
 COPY packages/driver-ops-mcp/package.json packages/driver-ops-mcp/package-lock.json /opt/openfang/driver-ops-mcp/
 RUN npm ci --omit=dev --prefix /opt/openfang/driver-ops-mcp
 COPY packages/driver-ops-mcp/index.mjs /opt/openfang/driver-ops-mcp/index.mjs
+COPY packages/orchestrator-mcp/package.json packages/orchestrator-mcp/package-lock.json /opt/openfang/orchestrator-mcp/
+RUN npm ci --omit=dev --prefix /opt/openfang/orchestrator-mcp
+COPY packages/orchestrator-mcp/index.mjs /opt/openfang/orchestrator-mcp/index.mjs
 EXPOSE 4200
 VOLUME /data
 ENV OPENFANG_HOME=/data
