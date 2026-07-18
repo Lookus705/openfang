@@ -40,7 +40,14 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock, Weak};
 use tracing::{debug, info, warn};
 
-/// The main OpenFang kernel — coordinates all subsystems.
+/// Reserved MCP allowlist entry that denies every MCP server for an agent.
+/// An empty allowlist means "all" for backward compatibility.
+const MCP_DENY_ALL_SENTINEL: &str = "__none__";
+
+fn mcp_servers_deny_all(servers: &[String]) -> bool {
+    servers.iter().any(|server| server == MCP_DENY_ALL_SENTINEL)
+}
+
 /// Stub LLM driver used when no providers are configured.
 /// Returns a helpful error so the dashboard still boots and users can configure providers.
 struct StubDriver;
@@ -3444,8 +3451,9 @@ impl OpenFangKernel {
         agent_id: AgentId,
         servers: Vec<String>,
     ) -> KernelResult<()> {
-        // Validate server names if allowlist is non-empty
-        if !servers.is_empty() {
+        // Validate server names if allowlist is non-empty. The reserved deny-all
+        // marker is intentionally not a configured server.
+        if !servers.is_empty() && !mcp_servers_deny_all(&servers) {
             if let Ok(mcp_tools) = self.mcp_tools.lock() {
                 let mut known_servers: std::collections::HashSet<String> =
                     std::collections::HashSet::new();
@@ -6253,7 +6261,9 @@ impl OpenFangKernel {
         // Step 3: Add MCP tools (filtered by agent's MCP server allowlist,
         // then by declared tools).
         if let Ok(mcp_tools) = self.mcp_tools.lock() {
-            let mcp_candidates: Vec<ToolDefinition> = if mcp_allowlist.is_empty() {
+            let mcp_candidates: Vec<ToolDefinition> = if mcp_servers_deny_all(&mcp_allowlist) {
+                Vec::new()
+            } else if mcp_allowlist.is_empty() {
                 mcp_tools.iter().cloned().collect()
             } else {
                 let normalized: Vec<String> = mcp_allowlist
@@ -6440,6 +6450,10 @@ impl OpenFangKernel {
     /// Build a compact MCP server/tool summary for the system prompt so the
     /// agent knows what external tool servers are connected.
     fn build_mcp_summary(&self, mcp_allowlist: &[String]) -> String {
+        if mcp_servers_deny_all(mcp_allowlist) {
+            return String::new();
+        }
+
         let tools = match self.mcp_tools.lock() {
             Ok(t) => t.clone(),
             Err(_) => return String::new(),

@@ -1521,8 +1521,18 @@ pub async fn get_agent(
             },
             "skills": entry.manifest.skills,
             "skills_mode": if entry.manifest.skills.is_empty() { "all" } else { "allowlist" },
-            "mcp_servers": entry.manifest.mcp_servers,
-            "mcp_servers_mode": if entry.manifest.mcp_servers.is_empty() { "all" } else { "allowlist" },
+            "mcp_servers": if entry.manifest.mcp_servers.iter().any(|server| server == "__none__") {
+                Vec::<String>::new()
+            } else {
+                entry.manifest.mcp_servers.clone()
+            },
+            "mcp_servers_mode": if entry.manifest.mcp_servers.iter().any(|server| server == "__none__") {
+                "none"
+            } else if entry.manifest.mcp_servers.is_empty() {
+                "all"
+            } else {
+                "allowlist"
+            },
             "fallback_models": entry.manifest.fallback_models,
         })),
     )
@@ -7603,7 +7613,14 @@ pub async fn get_agent_mcp_servers(
             }
         }
     }
-    let mode = if entry.manifest.mcp_servers.is_empty() {
+    let deny_all = entry
+        .manifest
+        .mcp_servers
+        .iter()
+        .any(|server| server == "__none__");
+    let mode = if deny_all {
+        "none"
+    } else if entry.manifest.mcp_servers.is_empty() {
         "all"
     } else {
         "allowlist"
@@ -7611,7 +7628,11 @@ pub async fn get_agent_mcp_servers(
     (
         StatusCode::OK,
         Json(serde_json::json!({
-            "assigned": entry.manifest.mcp_servers,
+            "assigned": if deny_all {
+                Vec::<String>::new()
+            } else {
+                entry.manifest.mcp_servers.clone()
+            },
             "available": available,
             "mode": mode,
         })),
